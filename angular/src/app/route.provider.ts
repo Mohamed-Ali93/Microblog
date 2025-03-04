@@ -22,6 +22,12 @@ function configureRoutes(routes: RoutesService) {
         layout: eLayoutType.application,
         requiredPolicy: 'Microblog.Books',
       },
+      {
+        path: '/posts',
+        name: '::Menu:Posts',
+        iconClass: 'fas fa-book',
+        layout: eLayoutType.application,
+      },
     ]);
   };
 }

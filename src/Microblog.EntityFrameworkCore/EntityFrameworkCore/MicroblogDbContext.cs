@@ -13,6 +13,7 @@ using Volo.Abp.Identity.EntityFrameworkCore;
 using Volo.Abp.PermissionManagement.EntityFrameworkCore;
 using Volo.Abp.SettingManagement.EntityFrameworkCore;
 using Volo.Abp.OpenIddict.EntityFrameworkCore;
+using Microblog.Posts;
 
 namespace Microblog.EntityFrameworkCore;
 
@@ -25,6 +26,9 @@ public class MicroblogDbContext :
     /* Add DbSet properties for your Aggregate Roots / Entities here. */
 
     public DbSet<Book> Books { get; set; }
+    public DbSet<Post> Posts { get; set; }
+    public DbSet<ProcessedImage> ProcessedImages { get; set; }
+
 
     #region Entities from the modules
 
@@ -79,7 +83,7 @@ public class MicroblogDbContext :
             b.ConfigureByConvention(); //auto configure for the base class props
             b.Property(x => x.Name).IsRequired().HasMaxLength(128);
         });
-        
+
         /* Configure your own tables/entities inside here */
 
         //builder.Entity<YourEntity>(b =>
@@ -88,5 +92,34 @@ public class MicroblogDbContext :
         //    b.ConfigureByConvention(); //auto configure for the base class props
         //    //...
         //});
+        // Configure the Post entity
+        builder.Entity<Post>(b =>
+        {
+            b.ToTable("Posts");
+            b.ConfigureByConvention();
+            b.Property(p => p.Content).IsRequired().HasMaxLength(140);
+            b.Property(p => p.OriginalImageUrl).IsRequired(false).HasMaxLength(1024);
+
+            // Configure owned entity for GeoCoordinate
+            b.OwnsOne(p => p.Location, location =>
+            {
+                location.Property(l => l.Latitude).HasColumnName("Latitude");
+                location.Property(l => l.Longitude).HasColumnName("Longitude");
+            });
+
+            // Configure relationship with ProcessedImage
+            b.HasMany(p => p.ProcessedImages)
+                .WithOne()
+                .HasForeignKey(i => i.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure the ProcessedImage entity
+        builder.Entity<ProcessedImage>(b =>
+        {
+            b.ToTable("ProcessedImages");
+            b.ConfigureByConvention();
+            b.Property(i => i.Url).IsRequired().HasMaxLength(1024);
+        });
     }
 }
