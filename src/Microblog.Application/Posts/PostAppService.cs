@@ -110,7 +110,7 @@ namespace Microblog.Posts
         public async Task<PagedResultDto<PostDto>> GetTimelineAsync(PostListDto input)
         {
             // Get posts ordered by creation time (descending)
-            var query = await _postRepository.GetQueryableAsync();
+            var query = await _postRepository.WithDetailsAsync(i=>i.ProcessedImages);
             var posts = query
                 .OrderByDescending(p => p.CreationTime)
                 .Skip(input.SkipCount)

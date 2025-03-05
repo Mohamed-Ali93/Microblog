@@ -32,5 +32,13 @@ export class PostService {
     },
       { apiName: this.apiName, ...config });
 
+      getPostImage = (blobName: string, config?: Partial<Rest.Config>) =>
+        this.restService.request<any, Blob>({
+          method: 'GET',
+          url: `/api/app/post/image?blobName=${blobName}`,
+          responseType: 'blob',  // 👈 Important to receive binary data
+        },
+          { apiName: this.apiName, ...config });
+
   constructor(private restService: RestService) { }
 }

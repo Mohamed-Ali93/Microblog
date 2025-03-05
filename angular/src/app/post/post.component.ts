@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { PostDto, PostListDto, PostService } from '@proxy/posts';
 import { environment } from 'src/environments/environment';
 @Component({
@@ -11,12 +12,15 @@ export class PostComponent {
   totalCount = 0;
   loading = false;
   page = 0;
-  pageSize = 1;
+  pageSize = 3;
 
   apiBaseUrl = `https://localhost:44367/api/app/post/image?blobName=`;
   itemsWithUrls: { imageUrl: string; content?: string; username?: string; originalImageUrl?: string; hasImage: boolean; isImageProcessed: boolean; location: import("d:/Work/Abjad/Microblog/angular/src/app/proxy/posts/models").GeoCoordinateDto; bestMatchImage: import("d:/Work/Abjad/Microblog/angular/src/app/proxy/posts/models").ProcessedImageDto; lastModificationTime?: string | Date; lastModifierId?: string; creationTime?: string | Date; creatorId?: string; id?: string; }[];
 
-  constructor(private postService: PostService) {}
+  constructor(private postService: PostService,
+    private sanitizer: DomSanitizer
+
+  ) {}
 
   ngOnInit() {
     this.loadPosts();
@@ -40,8 +44,14 @@ export class PostComponent {
         this.loading = false;
         this.itemsWithUrls = this.posts.map(item => ({
           ...item,
-          imageUrl:  `${this.apiBaseUrl}3a1878a9-fc53-3114-6b0e-dbe5f82c2f01_1200x675.webp`
+          imageUrl:  null,
         }));
+
+        this.itemsWithUrls.forEach(post => {
+          if (post.hasImage) {
+            this.loadImageForPost(post);
+          }
+        });
       },
       error: (err) => {
         console.error('Failed to load posts', err);
@@ -57,11 +67,11 @@ export class PostComponent {
     }
   }
 
-  // getImageUrl(blobName?: string): string {
-  //   console.log(blobName);
-  //   blobName = "3a1878a9-fc53-3114-6b0e-dbe5f82c2f01_1200x675.webp";
-  //   return blobName ? `${this.apiBaseUrl}${blobName}` : 'assets/placeholder.png';
-  // }
+  getImageUrl(blobName?: string): string {
+    console.log(blobName);
+    blobName = "3a1878a9-fc53-3114-6b0e-dbe5f82c2f01_1200x675.webp";
+    return blobName ? `${this.apiBaseUrl}${blobName}` : 'assets/placeholder.png';
+  }
   onImageError(event: Event) {
     console.log('Image error', event);
    // const imgElement = event.target as HTMLImageElement;
@@ -69,5 +79,22 @@ export class PostComponent {
   }
   trackByFn(index: number, item: PostDto) {
     return item.id;
+  }
+
+  loadImageForPost(post: PostDto & { imageUrl?: SafeUrl }) {
+    if (!post.id) return;
+
+     // Check for the best fit image
+  const imageIdToLoad = post.bestMatchImage?.url || post.originalImageUrl;
+    console.log(imageIdToLoad);
+    this.postService.getPostImage(imageIdToLoad).subscribe({
+      next: (blob) => {
+        const objectUrl = URL.createObjectURL(blob);
+        post.imageUrl = this.sanitizer.bypassSecurityTrustUrl(objectUrl);
+      },
+      error: (err) => {
+        console.error(`Failed to load image for post ${post.id}`, err);
+      }
+    });
   }
 }

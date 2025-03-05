@@ -96,18 +96,25 @@ namespace Microblog.BackgroundJobs
 
                         await _blobContainer.SaveAsync(blobName, processedImageStream);
 
-                        // Add the processed image to the post
-                        processedImageUrls.Add(new ProcessedImage(
+                        post.AddProcessedImage(new ProcessedImage(
                             Guid.NewGuid(),
                             dimension.width,
                             dimension.height,
                             blobName,
                             post.Id
                         ));
+                        // Add the processed image to the post
+                        //processedImageUrls.Add(new ProcessedImage(
+                        //    Guid.NewGuid(),
+                        //    dimension.width,
+                        //    dimension.height,
+                        //    blobName,
+                        //    post.Id
+                        //));
                     }
 
                     // Update the post with processed images
-                    post.ProcessedImages.AddRange(processedImageUrls);
+                    //post.ProcessedImages.AddRange(processedImageUrls);
                     await _postRepository.UpdateAsync(post, true);
                     await uow.CompleteAsync();
                 }
