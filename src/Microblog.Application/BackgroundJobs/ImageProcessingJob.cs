@@ -15,6 +15,7 @@ using Volo.Abp.BlobStoring;
 using Volo.Abp.Content;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Uow;
 
 namespace Microblog.BackgroundJobs
 {
@@ -29,9 +30,11 @@ namespace Microblog.BackgroundJobs
     public class ImageProcessingJob : AsyncBackgroundJob<ImageProcessingJobArgs>, ITransientDependency
     {
         private readonly IRepository<Post, Guid> _postRepository;
-        private readonly IBlobContainer<PostImageBlob> _blobContainer;
+        private readonly IBlobContainer _blobContainer;
         private readonly ILogger<ImageProcessingJob> _logger;
         private readonly HttpClient _httpClient;
+        private readonly IUnitOfWorkManager _unitOfWorkManager;
+
 
         // Define standard image dimensions to resize to
         private readonly List<(int width, int height)> _standardDimensions = new List<(int, int)>
@@ -45,67 +48,76 @@ namespace Microblog.BackgroundJobs
 
         public ImageProcessingJob(
             IRepository<Post, Guid> postRepository,
-            IBlobContainer<PostImageBlob> blobContainer,
+            IBlobContainer blobContainer,
             ILogger<ImageProcessingJob> logger,
+            IUnitOfWorkManager unitOfWorkManager,
             IHttpClientFactory httpClientFactory)
         {
             _postRepository = postRepository;
             _blobContainer = blobContainer;
             _logger = logger;
+            _unitOfWorkManager = unitOfWorkManager;
             _httpClient = httpClientFactory.CreateClient("ImageProcessing");
         }
 
         public override async Task ExecuteAsync(ImageProcessingJobArgs args)
         {
-            try
+            _logger.LogInformation("start processing image for post {PostId}", args.PostId);
+            using (var uow  = _unitOfWorkManager.Begin())
             {
-                // Get the post
-                var post = await _postRepository.GetAsync(args.PostId);
-
-                // Download the original image
-                var imageData = await DownloadImageAsync(args.OriginalImageUrl);
-
-                // Process the image for each standard dimension
-                var processedImageUrls = new List<ProcessedImage>();
-                foreach (var dimension in _standardDimensions)
+                try
                 {
-                    var processedImageStream = await ProcessImageAsync(
-                        imageData,
-                        dimension.width,
-                        dimension.height
-                    );
 
-                    // Generate unique blob name
-                    var blobName = $"{post.Id}_{dimension.width}x{dimension.height}.webp";
+                    // Get the post
+                    var post = await _postRepository.GetAsync(args.PostId);
 
-                    // Save processed image to blob container
-                    var remoteStreamContent = new RemoteStreamContent(
-                        processedImageStream,
-                        blobName,
-                        "image/webp"
-                    );
+                    // Download the original image
+                    var imageData = await _blobContainer.GetAllBytesAsync(args.OriginalImageUrl);
 
-                     await _blobContainer.SaveAsync(blobName, processedImageStream);
+                    // Process the image for each standard dimension
+                    var processedImageUrls = new List<ProcessedImage>();
+                    foreach (var dimension in _standardDimensions)
+                    {
+                        var processedImageStream = await ProcessImageAsync(
+                            imageData,
+                            dimension.width,
+                            dimension.height
+                        );
 
-                    // Add the processed image to the post
-                    processedImageUrls.Add(new ProcessedImage(
-                        Guid.NewGuid(),
-                        dimension.width,
-                        dimension.height,
-                        blobName,
-                        post.Id
-                    ));
+                        // Generate unique blob name
+                        var blobName = $"{post.Id}_{dimension.width}x{dimension.height}.webp";
+
+                        // Save processed image to blob container
+                        var remoteStreamContent = new RemoteStreamContent(
+                            processedImageStream,
+                            blobName,
+                            "image/webp"
+                        );
+
+                        await _blobContainer.SaveAsync(blobName, processedImageStream);
+
+                        // Add the processed image to the post
+                        processedImageUrls.Add(new ProcessedImage(
+                            Guid.NewGuid(),
+                            dimension.width,
+                            dimension.height,
+                            blobName,
+                            post.Id
+                        ));
+                    }
+
+                    // Update the post with processed images
+                    post.ProcessedImages.AddRange(processedImageUrls);
+                    await _postRepository.UpdateAsync(post, true);
+                    await uow.CompleteAsync();
                 }
-
-                // Update the post with processed images
-                post.ProcessedImages.AddRange(processedImageUrls);
-                await _postRepository.UpdateAsync(post, true);
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing image for post {PostId}", args.PostId);
+                    throw;
+                }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing image for post {PostId}", args.PostId);
-                throw;
-            }
+            
         }
 
         private async Task<byte[]> DownloadImageAsync(string imageUrl)

@@ -43,69 +43,6 @@ namespace Microblog.Posts
             _currentUser = currentUser;
         }
 
-        //public async Task<PostDto> CreateAsync(CreatePostDto input)
-        //{
-        //    // Validate input
-        //    if (input.Content.Length > 140)
-        //    {
-        //        throw new ArgumentException("Post content cannot exceed 140 characters.");
-        //    }
-
-        //    string originalImageUrl = null;
-
-        //    // Upload image if provided
-        //    if (input.Image != null)
-        //    {
-        //        // Validate image format
-        //        var extension = System.IO.Path.GetExtension(input.Image.FileName).ToLowerInvariant();
-        //        if (extension != ".jpg" && extension != ".jpeg" && extension != ".png" && extension != ".webp")
-        //        {
-        //            throw new ArgumentException("Only JPG, PNG, and WebP formats are allowed.");
-        //        }
-
-        //        // Validate image size
-        //        if (input.Image.Length > 2 * 1024 * 1024) // 2MB
-        //        {
-        //            throw new ArgumentException("Image size cannot exceed 2MB.");
-        //        }
-
-        //        // Upload original image to blob storage
-        //        originalImageUrl = await _blobStorageService.UploadFileAsync(input.Image);
-        //    }
-
-        //    // Generate random geo coordinates
-        //    var random = new Random();
-        //    var latitude = random.NextDouble() * 180 - 90; // -90 to 90
-        //    var longitude = random.NextDouble() * 360 - 180; // -180 to 180
-        //    var location = new GeoCoordinate(latitude, longitude);
-
-        //    // Create post entity
-        //    var post = new Post(
-        //        GuidGenerator.Create(),
-        //        input.Content,
-        //        originalImageUrl,
-        //        location,
-        //        _currentUser.GetId()
-        //    );
-
-        //    // Save post
-        //    await _postRepository.InsertAsync(post);
-
-        //    // Process image in background if an image is provided
-        //    if (originalImageUrl != null)
-        //    {
-        //        await _backgroundJobManager.EnqueueAsync(
-        //            new ImageProcessingJobArgs
-        //            {
-        //                PostId = post.Id,
-        //                OriginalImageUrl = originalImageUrl
-        //            }
-        //        );
-        //    }
-
-        //    // Map to DTO and return
-        //    return await MapToPostDtoAsync(post);
-        //}
         public async Task<PostDto> CreateAsync([FromForm]CreatePostDto input)
         {
             // Note: Input validation is handled by ABP validation system
@@ -120,10 +57,10 @@ namespace Microblog.Posts
                 using var stream = input.Image.OpenReadStream();
 
                 // Generate unique file name
-                var uniqueFileName = $"{Guid.NewGuid()}{Path.GetExtension(input.Image.FileName)}";
+                 originalImageUrl = $"{Guid.NewGuid()}{Path.GetExtension(input.Image.FileName)}";
 
                 await _blobStorageService.SaveAsync(
-                    uniqueFileName,
+                    originalImageUrl,
                     stream
                 );
             }
@@ -149,13 +86,22 @@ namespace Microblog.Posts
             // Process image in background if an image is provided
             if (originalImageUrl != null)
             {
-                await _backgroundJobManager.EnqueueAsync(
+                try
+                {
+                    await _backgroundJobManager.EnqueueAsync(
                     new ImageProcessingJobArgs
                     {
                         PostId = post.Id,
                         OriginalImageUrl = originalImageUrl
                     }
                 );
+                }
+                catch (Exception ex)
+                {
+
+                    throw;
+                }
+                
             }
 
             // Map to DTO and return
@@ -185,6 +131,23 @@ namespace Microblog.Posts
                 TotalCount = totalCount,
                 Items = postDtos
             };
+        }
+        [HttpGet]
+        public async Task<IActionResult> GetImageAsync(string blobName)
+        {
+            try
+            {
+                var blob = await _blobStorageService.GetAsync(blobName);
+                var memoryStream = new MemoryStream();
+                await blob.CopyToAsync(memoryStream);
+                memoryStream.Position = 0;
+
+                return new FileStreamResult(memoryStream, "image/webp");
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
         }
 
         private async Task<PostDto> MapToPostDtoAsync(Post post, int screenWidth = 0, int screenHeight = 0)

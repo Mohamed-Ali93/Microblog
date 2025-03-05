@@ -40,6 +40,7 @@ using Volo.Abp.Swashbuckle;
 using Volo.Abp.Studio.Client.AspNetCore;
 using Volo.Abp.Security.Claims;
 using Volo.Abp.BlobStoring;
+using Volo.Abp.BlobStoring.Database;
 
 namespace Microblog;
 
@@ -105,7 +106,7 @@ public class MicroblogHttpApiHostModule : AbpModule
             {
                 options.DisableTransportSecurityRequirement = true;
             });
-            
+
             Configure<ForwardedHeadersOptions>(options =>
             {
                 options.ForwardedHeaders = ForwardedHeaders.XForwardedProto;
@@ -119,6 +120,32 @@ public class MicroblogHttpApiHostModule : AbpModule
         ConfigureSwagger(context, configuration);
         ConfigureVirtualFileSystem(context);
         ConfigureCors(context, configuration);
+
+        ConfigureBlobStorage();
+        // Register the IHttpClientFactory
+        context.Services.AddHttpClient();
+    }
+
+    private void ConfigureBlobStorage()
+    {
+        // Default blob storage configuration
+        Configure<AbpBlobStoringOptions>(options =>
+        {
+            options.Containers.ConfigureDefault(container =>
+            {
+                // By default, ABP uses local file system storage
+             container.UseDatabase();
+                //container.UseDatabase(fileSystemConfig =>
+                //{
+                //    // Default path is typically in the application's directory
+                //    fileSystemConfig.BasePath = Path.Combine(
+                //        Directory.GetCurrentDirectory(),
+                //        "wwwroot",
+                //        "files"
+                //    );
+                //});
+            });
+        });
     }
 
     private void ConfigureAuthentication(ServiceConfigurationContext context)

@@ -3,7 +3,7 @@ import type { AuditedEntityDto, PagedAndSortedResultRequestDto } from '@abp/ng.c
 
 export interface CreatePostDto {
   content: string;
-  image: IFormFile;
+  image: File;
 }
 
 export interface GeoCoordinateDto {
