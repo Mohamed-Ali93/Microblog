@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, HostListener } from '@angular/core';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { PostDto, PostListDto, PostService } from '@proxy/posts';
 import { environment } from 'src/environments/environment';
@@ -14,7 +14,6 @@ export class PostComponent {
   page = 0;
   pageSize = 3;
 
-  apiBaseUrl = `https://localhost:44367/api/app/post/image?blobName=`;
   itemsWithUrls: { imageUrl: string; content?: string; username?: string; originalImageUrl?: string; hasImage: boolean; isImageProcessed: boolean; location: import("d:/Work/Abjad/Microblog/angular/src/app/proxy/posts/models").GeoCoordinateDto; bestMatchImage: import("d:/Work/Abjad/Microblog/angular/src/app/proxy/posts/models").ProcessedImageDto; lastModificationTime?: string | Date; lastModifierId?: string; creationTime?: string | Date; creatorId?: string; id?: string; }[];
 
   constructor(private postService: PostService,
@@ -59,19 +58,17 @@ export class PostComponent {
       }
     });
   }
+  @HostListener('window:scroll', [])
 
-  onScroll() {
-    if (this.posts.length < this.totalCount) {
-      this.page++;
-      this.loadPosts();
+  onScroll(): void {
+    if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 350) && !this.loading) {
+      if (this.posts.length < this.totalCount) {
+        this.page++;
+        this.loadPosts();
+      }
     }
   }
-
-  getImageUrl(blobName?: string): string {
-    console.log(blobName);
-    blobName = "3a1878a9-fc53-3114-6b0e-dbe5f82c2f01_1200x675.webp";
-    return blobName ? `${this.apiBaseUrl}${blobName}` : 'assets/placeholder.png';
-  }
+  
   onImageError(event: Event) {
     console.log('Image error', event);
    // const imgElement = event.target as HTMLImageElement;
