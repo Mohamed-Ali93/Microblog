@@ -88,16 +88,18 @@ You can see the following resources to learn more about your solution and the AB
 
 ### Possible Improvements
 1. Blob Storage Optimization
-Problem: Storing images in PostgreSQL is inefficient.
 
-Solution: Migrate to cloud storage (AWS S3/Azure Blob) or use a dedicated service like MinIO for local development.
+   Problem: Storing images in PostgreSQL is inefficient.
+
+   Solution: Migrate to cloud storage (AWS S3/Azure Blob) or use a dedicated service like MinIO for local development.
 
 2. Distributed Background Jobs
-Problem: ABP’s BackgroundWorker is limited to a single server.
+   Problem: ABP’s BackgroundWorker is limited to a single server.
 
-Solution: Use Hangfire or RabbitMQ for scalable job processing.
+   Solution: Use Hangfire or RabbitMQ for scalable job processing.
 
 3. Real-Time Timeline
-Problem: Users must refresh to see new posts.
 
-Solution: Add SignalR for real-time updates.
+   Problem: Users must refresh to see new posts.
+
+   Solution: Add SignalR for real-time updates.
