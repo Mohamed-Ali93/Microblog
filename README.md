@@ -23,6 +23,7 @@ The solution comes with a default configuration that works out of the box. Howev
 Userame : admin
 Email : admin@abp.io
 Password : 1q2w3E*
+* I used Yarn to run angular app
 
 #### Generating a Signing Certificate
 
