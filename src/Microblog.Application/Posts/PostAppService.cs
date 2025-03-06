@@ -24,7 +24,6 @@ namespace Microblog.Posts
     {
         private readonly IRepository<Post, Guid> _postRepository;
         private readonly IIdentityUserRepository _userRepository;
-        //private readonly IBlobStorageService _blobStorageService;
         private readonly IBlobContainer _blobStorageService;
         private readonly IBackgroundJobManager _backgroundJobManager;
         private readonly ICurrentUser _currentUser;
@@ -53,7 +52,6 @@ namespace Microblog.Posts
             if (input.Image != null && input.Image.Length > 0)
             {
                 // Upload original image to blob storage
-                //originalImageUrl = await _blobStorageService.UploadFileAsync(input.Image);
                 using var stream = input.Image.OpenReadStream();
 
                 // Generate unique file name

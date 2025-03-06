@@ -19,20 +19,12 @@ using Volo.Abp.Uow;
 
 namespace Microblog.BackgroundJobs
 {
-    public class ImageProcessingJobArgs
-    {
-        public Guid PostId { get; set; }
-        public string OriginalImageUrl { get; set; }
-    }
-
-    public class PostImageBlob { } // Marker interface for post images
 
     public class ImageProcessingJob : AsyncBackgroundJob<ImageProcessingJobArgs>, ITransientDependency
     {
         private readonly IRepository<Post, Guid> _postRepository;
         private readonly IBlobContainer _blobContainer;
         private readonly ILogger<ImageProcessingJob> _logger;
-        private readonly HttpClient _httpClient;
         private readonly IUnitOfWorkManager _unitOfWorkManager;
 
 
@@ -50,14 +42,13 @@ namespace Microblog.BackgroundJobs
             IRepository<Post, Guid> postRepository,
             IBlobContainer blobContainer,
             ILogger<ImageProcessingJob> logger,
-            IUnitOfWorkManager unitOfWorkManager,
-            IHttpClientFactory httpClientFactory)
+            IUnitOfWorkManager unitOfWorkManager
+            )
         {
             _postRepository = postRepository;
             _blobContainer = blobContainer;
             _logger = logger;
             _unitOfWorkManager = unitOfWorkManager;
-            _httpClient = httpClientFactory.CreateClient("ImageProcessing");
         }
 
         public override async Task ExecuteAsync(ImageProcessingJobArgs args)
@@ -67,7 +58,6 @@ namespace Microblog.BackgroundJobs
             {
                 try
                 {
-
                     // Get the post
                     var post = await _postRepository.GetAsync(args.PostId);
 
@@ -96,6 +86,7 @@ namespace Microblog.BackgroundJobs
 
                         await _blobContainer.SaveAsync(blobName, processedImageStream);
 
+                        // Add the processed image to the post
                         post.AddProcessedImage(new ProcessedImage(
                             Guid.NewGuid(),
                             dimension.width,
@@ -103,14 +94,7 @@ namespace Microblog.BackgroundJobs
                             blobName,
                             post.Id
                         ));
-                        // Add the processed image to the post
-                        //processedImageUrls.Add(new ProcessedImage(
-                        //    Guid.NewGuid(),
-                        //    dimension.width,
-                        //    dimension.height,
-                        //    blobName,
-                        //    post.Id
-                        //));
+                        
                     }
 
                     // Update the post with processed images
@@ -127,13 +111,7 @@ namespace Microblog.BackgroundJobs
             
         }
 
-        private async Task<byte[]> DownloadImageAsync(string imageUrl)
-        {
-            var response = await _httpClient.GetAsync(imageUrl);
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsByteArrayAsync();
-        }
-
+        
         private async Task<Stream> ProcessImageAsync(byte[] imageData, int width, int height)
         {
             var memoryStream = new MemoryStream();
