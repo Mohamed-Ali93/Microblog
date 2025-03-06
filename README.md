@@ -19,6 +19,10 @@ The solution comes with a default configuration that works out of the box. Howev
 
 * Run `abp install-libs` command on your solution folder to install client-side package dependencies. This step is automatically done when you create a new solution, if you didn't especially disabled it. However, you should run it yourself if you have first cloned this solution from your source control, or added a new client-side package dependency to your solution.
 * Run `Microblog.DbMigrator` to create the initial database. This step is also automatically done when you create a new solution, if you didn't especially disabled it. This should be done in the first run. It is also needed if a new database migration is added to the solution later.
+* After run `Microblog.DbMigrator` Default user will be added 
+Userame : admin
+Email : admin@abp.io
+Password : 1q2w3E*
 
 #### Generating a Signing Certificate
 
@@ -64,3 +68,36 @@ You can see the following resources to learn more about your solution and the AB
 
 * [Web Application Development Tutorial](https://abp.io/docs/latest/tutorials/book-store/part-1)
 * [Application Startup Template](https://abp.io/docs/latest/startup-templates/application/index)
+
+### Technical Decisions
+1. PostgreSQL as Database
+*  Why?
+   PostgreSQL was chosen for its robustness, ACID compliance, and seamless integration with EF Core. It handles structured data (users, posts) efficiently.
+
+*  Alternatives Considered:
+   SQL Server (license cost) and SQLite (limited scalability).
+
+2. Storage Provider Flexibility
+*  Current Implementation:
+      Images are stored in PostgreSQL for simplicity and to avoid dependency on cloud accounts during local development.
+
+*  Drawback: Not ideal for production-scale file handling.
+
+*  Why This Design?
+    The application uses ABP’s dependency injection and the IStorageProvider interface, making it trivial to swap storage providers (change to Azure or aws may take less than 1 hour).
+
+### Possible Improvements
+1. Blob Storage Optimization
+Problem: Storing images in PostgreSQL is inefficient.
+
+Solution: Migrate to cloud storage (AWS S3/Azure Blob) or use a dedicated service like MinIO for local development.
+
+2. Distributed Background Jobs
+Problem: ABP’s BackgroundWorker is limited to a single server.
+
+Solution: Use Hangfire or RabbitMQ for scalable job processing.
+
+3. Real-Time Timeline
+Problem: Users must refresh to see new posts.
+
+Solution: Add SignalR for real-time updates.

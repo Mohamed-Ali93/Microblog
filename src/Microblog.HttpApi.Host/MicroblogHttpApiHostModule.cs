@@ -134,16 +134,8 @@ public class MicroblogHttpApiHostModule : AbpModule
             options.Containers.ConfigureDefault(container =>
             {
                 // By default, ABP uses local file system storage
-             container.UseDatabase();
-                //container.UseDatabase(fileSystemConfig =>
-                //{
-                //    // Default path is typically in the application's directory
-                //    fileSystemConfig.BasePath = Path.Combine(
-                //        Directory.GetCurrentDirectory(),
-                //        "wwwroot",
-                //        "files"
-                //    );
-                //});
+                container.UseDatabase();
+                
             });
         });
     }
