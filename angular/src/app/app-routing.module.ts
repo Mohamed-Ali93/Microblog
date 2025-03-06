@@ -22,7 +22,7 @@ const routes: Routes = [
       import('@abp/ng.setting-management').then(m => m.SettingManagementModule.forLazy()),
   },
   { path: 'books', loadChildren: () => import('./book/book.module').then(m => m.BookModule) },
-  { path: 'posts', loadChildren: () => import('./post/post.module').then(m => m.PostModule) },
+  { path: 'posts', loadChildren: () => import('./post/post.module').then(m => m.PostModule),canActivate: [authGuard, permissionGuard] },
 ];
 
 @NgModule({
